@@ -23,6 +23,7 @@ fn main() {
                           .get_matches();
 
 
+    // TODO strip read in from a separate directory, like an art directory
     match matches.subcommand() {
         ("pack", _) => pack_tiles(),
         ("strip", _) => panic!("Not implemented"),
@@ -33,6 +34,7 @@ fn main() {
 fn pack_tiles() {
     // TODO walk resources folder and create corresponding output folders
     // TODO take in a param for doing a take on the desired dirs?
+    // TODO read in a resources folder that is not in the src dir
     create_dir("output");
     create_dir("output/desert");
     create_dir("output/library");
