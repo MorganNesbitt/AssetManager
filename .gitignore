@@ -1,0 +1,5 @@
+.DS_STORE
+/target
+**/*.rs.bk
+
+src/resources/**
