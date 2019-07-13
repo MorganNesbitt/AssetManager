@@ -7,7 +7,7 @@ extern crate clap;
 mod pack;
 mod strip;
 
-use clap::{Arg, App, SubCommand};
+use clap::{App, SubCommand};
 
 fn main() {
     let matches = App::new("Asset Manager")
@@ -22,7 +22,6 @@ fn main() {
                           .get_matches();
 
 
-    // TODO strip read in from a separate directory, like an art directory
     match matches.subcommand() {
         ("pack", _) => pack::pack_tiles(),
         ("strip", _) => strip::strip_transparency(),
