@@ -1,5 +1,4 @@
 # Asset Manager
-==
 
 Project meant to make common tasks around assets easier to do.
 Exposes a cli currently to interact.
