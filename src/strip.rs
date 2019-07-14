@@ -1,19 +1,21 @@
 use image::Rgba;
 use std::path::Path;
 
-pub fn strip_transparency<P>(path: P)
+pub fn strip_transparency<P>(input: P, output: P)
 where
     P: AsRef<Path>,
 {
-    strip_transparency_from_path(path.as_ref())
+    strip_transparency_from_path(input.as_ref(), output.as_ref())
 }
 
-fn strip_transparency_from_path(path: &Path) {
-    if !path.is_file() {
-        panic!("Only support files currently")
+fn strip_transparency_from_path(input_path: &Path, output_path: &Path) {
+    if !input_path.is_file() {
+        panic!("Input only support files currently. Received {:?}", input_path)
+    } else if output_path.extension().expect("Expect output file to have extension") != "png" {
+        panic!("Output only support files currently. Received {:?}", output_path)
     }
 
-    let image = image::open(path).expect("Expect image to load");
+    let image = image::open(input_path).expect("Expect image to load");
     let workable_image = image.as_rgba8().expect("Expect to be convertable to rgba8");
 
     let (columns, rows) = workable_image.dimensions();
@@ -98,8 +100,6 @@ fn strip_transparency_from_path(path: &Path) {
         }
     }
 
-    let output_file_path = "./src/resources/Stripped/Desert/planks_W.png";
-
     let x = left_column.1;
     let y = top_row.1;
     let width = right_column.1 - left_column.1;
@@ -109,7 +109,7 @@ fn strip_transparency_from_path(path: &Path) {
     let bounded_image = sub_image.to_image();
 
     bounded_image
-        .save(output_file_path)
+        .save(output_path)
         .expect("Expected to save sub image");
 }
 

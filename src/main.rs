@@ -13,7 +13,7 @@ fn main() {
 
     match matches.subcommand() {
         ("pack", args) => handle_pack(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
-        ("strip", args) => handle_strip(args.unwrap().value_of("input")),
+        ("strip", args) => handle_strip(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
         ("completions", _) => handle_completions(),
         _ => {}
     }
@@ -28,6 +28,6 @@ fn handle_pack(input: Option<&str>, output: Option<&str>) {
     pack::pack_tiles(input.unwrap(), output.unwrap())
 }
 
-fn handle_strip(possible_path: Option<&str>) {
-    strip::strip_transparency(possible_path.unwrap())
+fn handle_strip(input: Option<&str>, output: Option<&str>) {
+    strip::strip_transparency(input.unwrap(), output.unwrap())
 }
