@@ -12,11 +12,7 @@ where
 }
 
 // TODO maybe add sample / take to test directories with big images
-// TODO look into outputing multiple spritesheets so they can be power of 2 / smaller
 // TODO add tests
-// TODO look into some kind of progress bar for each step
-//   e.g. loading images
-//   e.g. writing to file
 pub fn pack_tiles_from_path(input: &Path, output: &Path) {
     if !input.is_dir() {
         panic!("Can only pack directory. Was given {:?}", input);
