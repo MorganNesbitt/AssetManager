@@ -1,30 +1,33 @@
+extern crate clap;
 extern crate image;
+extern crate rayon;
 extern crate sheep;
 extern crate walkdir;
-extern crate rayon;
-extern crate clap;
 
+mod cli;
 mod pack;
 mod strip;
 
-use clap::{App, SubCommand};
-
 fn main() {
-    let matches = App::new("Asset Manager")
-                          .version("0.1")
-                          .author("humansnotfish")
-                          .subcommand(SubCommand::with_name("strip")
-                                      .about("takes a directory and strips the images of transparency")
-                                      .version("0.1"))
-                          .subcommand(SubCommand::with_name("pack")
-                                      .about("pack a directory of assets in a sprite sheet")
-                                      .version("0.1"))
-                          .get_matches();
-
+    let matches = cli::build_cli().get_matches();
 
     match matches.subcommand() {
-        ("pack", _) => pack::pack_tiles(),
-        ("strip", _) => strip::strip_transparency(),
-        _ => {},
+        ("pack", args) => handle_pack(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
+        ("strip", args) => handle_strip(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
+        ("completions", _) => handle_completions(),
+        _ => {}
     }
+}
+
+// Completions dont appear to work
+fn handle_completions() {
+    cli::build_cli().gen_completions_to("asset_manager", clap::Shell::Zsh, &mut std::io::stdout());
+}
+
+fn handle_pack(input: Option<&str>, output: Option<&str>) {
+    pack::pack_tiles(input.unwrap(), output.unwrap())
+}
+
+fn handle_strip(input: Option<&str>, output: Option<&str>) {
+    strip::strip_transparency(input.unwrap(), output.unwrap())
 }
