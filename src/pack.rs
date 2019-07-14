@@ -11,6 +11,12 @@ where
     pack_tiles_from_path(input.as_ref(), output.as_ref())
 }
 
+// TODO maybe add sample / take to test directories with big images
+// TODO look into outputing multiple spritesheets so they can be power of 2 / smaller
+// TODO add tests
+// TODO look into some kind of progress bar for each step
+//   e.g. loading images
+//   e.g. writing to file
 pub fn pack_tiles_from_path(input: &Path, output: &Path) {
     if !input.is_dir() {
         panic!("Can only pack directory. Was given {:?}", input);
@@ -18,11 +24,7 @@ pub fn pack_tiles_from_path(input: &Path, output: &Path) {
         panic!("Can only output to directory. Was given {:?}", output);
     }
 
-    println!("Starting to iterate of Desert Folder");
-    let desert_images = generate_images_from_path(input);
-    println!("count of desert images {:?}", desert_images.len());
-
-    write_images_to_file(output, desert_images);
+    write_images_to_file(output, generate_images_from_path(input));
 }
 
 fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
@@ -88,6 +90,5 @@ fn generate_images_from_path(path: &Path) -> Vec<image::DynamicImage> {
 
             image::open(file_path).expect("Failed to open image")
         })
-        .take(2)
         .collect()
 }
