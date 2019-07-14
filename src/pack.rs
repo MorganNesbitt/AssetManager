@@ -1,6 +1,5 @@
 use rayon::prelude::*;
 use sheep::{AmethystFormat, InputSprite, SimplePacker};
-// use std::fs::create_dir;
 use std::path::Path;
 use std::{fs::File, io::prelude::*};
 use walkdir::WalkDir;
