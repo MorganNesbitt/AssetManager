@@ -1,32 +1,32 @@
-use sheep::{AmethystFormat, InputSprite, SimplePacker};
-use std::{fs::File, fs::create_dir, io::prelude::*};
-use walkdir::WalkDir;
 use rayon::prelude::*;
+use sheep::{AmethystFormat, InputSprite, SimplePacker};
+// use std::fs::create_dir;
+use std::path::Path;
+use std::{fs::File, io::prelude::*};
+use walkdir::WalkDir;
 
-pub fn pack_tiles() {
-    // TODO walk resources folder and create corresponding output folders
-    // TODO take in a param for doing a take on the desired dirs?
-    // TODO read in a resources folder that is not in the src dir
-    create_dir("output");
-    create_dir("output/desert");
-    create_dir("output/library");
-
-    println!("Starting to iterate of Desert Folder");
-    let desert_images =
-        generate_images_from_path("./src/resources/Desert");
-    println!("count of desert images {:?}", desert_images.len());
-
-    write_images_to_file("output/desert", desert_images);
-
-    // println!("Starting to iterate of Library Folder");
-    // let library_images =
-    //     generate_images_from_path("./src/resources/Library");
-    // println!("count of library images {:?}", library_images.len());
-
-    // write_images_to_file("output/library", library_images);
+pub fn pack_tiles<P>(input: P, output: P)
+where
+    P: AsRef<Path>,
+{
+    pack_tiles_from_path(input.as_ref(), output.as_ref())
 }
 
-fn write_images_to_file(base_path: &str, images: Vec<image::DynamicImage>) {
+pub fn pack_tiles_from_path(input: &Path, output: &Path) {
+    if !input.is_dir() {
+        panic!("Can only pack directory. Was given {:?}", input);
+    } else if !output.is_dir() {
+        panic!("Can only output to directory. Was given {:?}", output);
+    }
+
+    println!("Starting to iterate of Desert Folder");
+    let desert_images = generate_images_from_path(input);
+    println!("count of desert images {:?}", desert_images.len());
+
+    write_images_to_file(output, desert_images);
+}
+
+fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
     let sprites = images
         .into_par_iter()
         .map(|dynamic_image| {
@@ -36,7 +36,7 @@ fn write_images_to_file(base_path: &str, images: Vec<image::DynamicImage>) {
             let dimensions = img.dimensions();
             let bytes = img
                 .pixels()
-                .flat_map(|it| it.data.iter().map(|it| *it))
+                .flat_map(|it| it.data.iter().copied())
                 .collect::<Vec<u8>>();
             InputSprite {
                 dimensions,
@@ -64,12 +64,13 @@ fn write_images_to_file(base_path: &str, images: Vec<image::DynamicImage>) {
     .expect("Failed to construct image from sprite sheet bytes");
 
     outbuf
-        .save(base_path.to_string() + "/packed.png")
+        .save(base_path.join("packed.png"))
         .expect("Failed to save image");
 
     // Lastly, we serialize the meta info using serde. This can be any format
     // you want, just implement the trait and pass it to encode.
-    let mut meta_file = File::create(base_path.to_string() + "/packed.ron").expect("Failed to create meta file");
+    let mut meta_file =
+        File::create(base_path.join("packed.ron")).expect("Failed to create meta file");
     let meta_str = ron::ser::to_string(&meta).expect("Failed to encode meta file");
 
     meta_file
@@ -77,7 +78,7 @@ fn write_images_to_file(base_path: &str, images: Vec<image::DynamicImage>) {
         .expect("Failed to write meta file");
 }
 
-fn generate_images_from_path(path: &str) -> Vec<image::DynamicImage> {
+fn generate_images_from_path(path: &Path) -> Vec<image::DynamicImage> {
     WalkDir::new(path)
         .follow_links(true)
         .into_iter()
