@@ -7,13 +7,20 @@ extern crate walkdir;
 mod cli;
 mod pack;
 mod strip;
+mod utils;
 
 fn main() {
     let matches = cli::build_cli().get_matches();
 
     match matches.subcommand() {
-        ("pack", args) => handle_pack(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
-        ("strip", args) => handle_strip(args.unwrap().value_of("input"), args.unwrap().value_of("output")),
+        ("pack", args) => handle_pack(
+            args.unwrap().value_of("input"),
+            args.unwrap().value_of("output"),
+        ),
+        ("strip", args) => handle_strip(
+            args.unwrap().value_of("input"),
+            args.unwrap().value_of("output"),
+        ),
         ("completions", _) => handle_completions(),
         _ => {}
     }
