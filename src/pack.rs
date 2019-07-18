@@ -1,8 +1,8 @@
+use super::utils::generate_images_from_path;
 use rayon::prelude::*;
-use sheep::{AmethystFormat, InputSprite, SimplePacker};
+use sheep::{AmethystFormat, InputSprite, MaxrectsOptions, MaxrectsPacker};
 use std::path::Path;
 use std::{fs::File, io::prelude::*};
-use walkdir::WalkDir;
 
 pub fn pack_tiles<P>(input: P, output: P)
 where
@@ -46,45 +46,31 @@ fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
 
     // Do the actual packing! 4 defines the stride, since we're using rgba8 we
     // have 4 bytes per pixel.
-    let sprite_sheet = sheep::pack::<SimplePacker>(sprites, 4);
+    let options = MaxrectsOptions::default().max_width(4096).max_height(4096);
+    let sprite_sheets = sheep::pack::<MaxrectsPacker>(sprites, 4, options);
 
-    // Now, we can encode the sprite sheet in a format of our choosing to
-    // save things such as offsets, positions of the sprites and so on.
-    let meta = sheep::encode::<AmethystFormat>(&sprite_sheet, ());
+    for (index, sprite_sheet) in sprite_sheets.into_iter().enumerate() {
+        let meta = sheep::encode::<AmethystFormat>(&sprite_sheet, ());
 
-    // Next, we save the output to a file using the image crate again.
-    let outbuf = image::RgbaImage::from_vec(
-        sprite_sheet.dimensions.0,
-        sprite_sheet.dimensions.1,
-        sprite_sheet.bytes,
-    )
-    .expect("Failed to construct image from sprite sheet bytes");
+        // Next, we save the output to a file using the image crate again.
+        let outbuf = image::RgbaImage::from_vec(
+            sprite_sheet.dimensions.0,
+            sprite_sheet.dimensions.1,
+            sprite_sheet.bytes,
+        )
+        .expect("Failed to construct image from sprite sheet bytes");
 
-    outbuf
-        .save(base_path.join("packed.png"))
-        .expect("Failed to save image");
+        let packed_name = format!("packed{}", index);
+        outbuf
+            .save(base_path.join(format!("{}.png", packed_name)))
+            .expect("Failed to save image");
 
-    // Lastly, we serialize the meta info using serde. This can be any format
-    // you want, just implement the trait and pass it to encode.
-    let mut meta_file =
-        File::create(base_path.join("packed.ron")).expect("Failed to create meta file");
-    let meta_str = ron::ser::to_string(&meta).expect("Failed to encode meta file");
+        let mut meta_file = File::create(base_path.join(format!("{}.ron", packed_name)))
+            .expect("Failed to create meta file");
+        let meta_str = ron::ser::to_string(&meta).expect("Failed to encode meta file");
 
-    meta_file
-        .write_all(meta_str.as_bytes())
-        .expect("Failed to write meta file");
-}
-
-fn generate_images_from_path(path: &Path) -> Vec<image::DynamicImage> {
-    WalkDir::new(path)
-        .follow_links(true)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|entry| entry.file_name().to_str().unwrap().ends_with(".png"))
-        .map(|entry| {
-            let file_path = entry.path();
-
-            image::open(file_path).expect("Failed to open image")
-        })
-        .collect()
+        meta_file
+            .write_all(meta_str.as_bytes())
+            .expect("Failed to write meta file");
+    }
 }
