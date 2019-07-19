@@ -1,29 +1,38 @@
-use super::utils::generate_images_from_path;
+use indicatif::ProgressBar;
 use rayon::prelude::*;
 use sheep::{AmethystFormat, InputSprite, MaxrectsOptions, MaxrectsPacker};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{fs::File, io::prelude::*};
+use walkdir::WalkDir;
 
-pub fn pack_tiles<P>(input: P, output: P)
+pub fn pack_tiles<P>(input: P, output: P, progress_bar: &ProgressBar)
 where
     P: AsRef<Path>,
 {
-    pack_tiles_from_path(input.as_ref(), output.as_ref())
+    pack_tiles_from_path(input.as_ref(), output.as_ref(), progress_bar)
 }
 
 // TODO maybe add sample / take to test directories with big images
 // TODO add tests
-pub fn pack_tiles_from_path(input: &Path, output: &Path) {
+pub fn pack_tiles_from_path(input: &Path, output: &Path, progress_bar: &ProgressBar) {
     if !input.is_dir() {
         panic!("Can only pack directory. Was given {:?}", input);
     } else if !output.is_dir() {
         panic!("Can only output to directory. Was given {:?}", output);
     }
 
-    write_images_to_file(output, generate_images_from_path(input));
+    let images = generate_images_from_path(input, progress_bar);
+    write_images_to_file(output, images, progress_bar);
 }
 
-fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
+fn write_images_to_file(
+    base_path: &Path,
+    images: Vec<image::DynamicImage>,
+    progress_bar: &ProgressBar,
+) {
+    progress_bar.set_length(images.len() as u64);
+    progress_bar.println("Loading images as sprites");
+
     let sprites = images
         .into_par_iter()
         .map(|dynamic_image| {
@@ -35,12 +44,17 @@ fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
                 .pixels()
                 .flat_map(|it| it.data.iter().copied())
                 .collect::<Vec<u8>>();
+
+            progress_bar.inc(1);
             InputSprite {
                 dimensions,
                 bytes: bytes.clone(),
             }
         })
         .collect::<Vec<InputSprite>>();
+
+    progress_bar.finish_and_clear();
+    progress_bar.println("Preparing packing images into spritesheets of max 4096x4096");
 
     // We'll just repeat the same sprite 16 times and pack it into a texture.
 
@@ -49,7 +63,10 @@ fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
     let options = MaxrectsOptions::default().max_width(4096).max_height(4096);
     let sprite_sheets = sheep::pack::<MaxrectsPacker>(sprites, 4, options);
 
-    for (index, sprite_sheet) in sprite_sheets.into_iter().enumerate() {
+    progress_bar.set_length(sprite_sheets.len() as u64);
+    progress_bar.println("packing images into spritesheets");
+
+    for (index, sprite_sheet) in progress_bar.wrap_iter(sprite_sheets.into_iter().enumerate()) {
         let meta = sheep::encode::<AmethystFormat>(&sprite_sheet, ());
 
         // Next, we save the output to a file using the image crate again.
@@ -73,4 +90,28 @@ fn write_images_to_file(base_path: &Path, images: Vec<image::DynamicImage>) {
             .write_all(meta_str.as_bytes())
             .expect("Failed to write meta file");
     }
+
+    progress_bar.finish_and_clear();
+    progress_bar.println("Finished packing and saved files");
+}
+
+pub fn generate_images_from_path(
+    path: &Path,
+    progress_bar: &ProgressBar,
+) -> Vec<image::DynamicImage> {
+    let paths: Vec<PathBuf> = WalkDir::new(path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|entry| entry.file_name().to_str().unwrap().ends_with(".png"))
+        .map(|entry| entry.into_path())
+        .collect();
+
+    progress_bar.set_length(paths.len() as u64);
+    progress_bar.println("Opening images from paths");
+
+    progress_bar
+        .wrap_iter(paths.into_iter())
+        .map(|entry| image::open(entry.as_path()).expect("Failed to open image"))
+        .collect()
 }
