@@ -1,22 +1,32 @@
 use image::Rgba;
+use indicatif::ProgressBar;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-pub fn strip_transparency<P>(input: P, output: P)
+pub fn strip_transparency<P>(input: P, output: P, progress_bar: &ProgressBar)
 where
     P: AsRef<Path>,
 {
-    strip_transparency_from_input_output(input.as_ref(), output.as_ref())
+    strip_transparency_from_input_output(input.as_ref(), output.as_ref(), progress_bar)
 }
 
-fn strip_transparency_from_input_output(input_path: &Path, output_path: &Path) {
+fn strip_transparency_from_input_output(
+    input_path: &Path,
+    output_path: &Path,
+    progress_bar: &ProgressBar,
+) {
     if input_path.is_dir() && !output_path.is_dir() {
         panic!(
             "Input is directory, output must be directory. Received {:?}",
             output_path
         )
-    } else if input_path.is_file() && output_path.extension().expect("Unexpected output file type") != "png" {
+    } else if input_path.is_file()
+        && output_path
+            .extension()
+            .expect("Unexpected output file type")
+            != "png"
+    {
         panic!(
             "Input is file, output must be file. Received {:?}",
             output_path
@@ -38,15 +48,21 @@ fn strip_transparency_from_input_output(input_path: &Path, output_path: &Path) {
         .map(|entry| entry.into_path())
         .collect();
 
-    paths
-        .into_par_iter()
-        .for_each(|path_buf| {
-            let path = path_buf.as_path().to_str().expect("Could not convert path to string");
-            let output_path_name = output_path.join(path_buf.file_name().unwrap());
-            strip_transparency_from_path(path)
-                .save(output_path_name)
-                .expect("Expected to save sub image");
-        });
+    progress_bar.set_length(paths.len() as u64);
+    progress_bar.println("Stripping images and saving to output directory");
+
+    paths.into_par_iter().for_each(|path_buf| {
+        let path = path_buf
+            .as_path()
+            .to_str()
+            .expect("Could not convert path to string");
+        let output_path_name = output_path.join(path_buf.file_name().unwrap());
+        strip_transparency_from_path(path)
+            .save(output_path_name)
+            .expect("Expected to save sub image");
+        progress_bar.inc(1);
+    });
+    progress_bar.finish_with_message("Stripped all images into output directory");
 }
 
 fn strip_transparency_from_image(image: &image::RgbaImage) -> image::RgbaImage {
@@ -146,21 +162,4 @@ fn strip_transparency_from_path(input_path: &str) -> image::RgbaImage {
         .as_rgba8()
         .expect("Expect to be convertable to rgba8");
     strip_transparency_from_image(image)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // #[test]
-    // fn perfect_bounding_boxes() {
-    //     let (perfect_bounding_box, _) = test_bounding_perfect_and_spaced_boxes();
-    //     assert_ne!(perfect_bounding_box, 0, "Perfect bounding box should have non zero alpha values");
-    // }
-
-    // #[test]
-    // fn spaced_bounding_boxes() {
-    //     let (_, spaced_bounding_box) = test_bounding_perfect_and_spaced_boxes();
-    //     assert_eq!(spaced_bounding_box, 0, "Spaced has no non-zero alphas as its perfect bounding box + 1 in all directions");
-    // }
 }
