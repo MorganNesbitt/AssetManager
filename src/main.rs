@@ -7,7 +7,8 @@ extern crate walkdir;
 mod cli;
 mod pack;
 mod strip;
-mod utils;
+
+use indicatif::ProgressBar;
 
 fn main() {
     let matches = cli::build_cli().get_matches();
@@ -32,9 +33,9 @@ fn handle_completions() {
 }
 
 fn handle_pack(input: Option<&str>, output: Option<&str>) {
-    pack::pack_tiles(input.unwrap(), output.unwrap())
+    pack::pack_tiles(input.unwrap(), output.unwrap(), &ProgressBar::new(0))
 }
 
 fn handle_strip(input: Option<&str>, output: Option<&str>) {
-    strip::strip_transparency(input.unwrap(), output.unwrap())
+    strip::strip_transparency(input.unwrap(), output.unwrap(), &ProgressBar::new(0))
 }
