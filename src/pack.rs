@@ -60,13 +60,13 @@ fn write_images_to_file(
 
     // Do the actual packing! 4 defines the stride, since we're using rgba8 we
     // have 4 bytes per pixel.
-    let options = MaxrectsOptions::default().max_width(4096).max_height(4096);
+    let options = MaxrectsOptions::default().max_width(8192).max_height(8192);
     let sprite_sheets = sheep::pack::<MaxrectsPacker>(sprites, 4, options);
 
     progress_bar.set_length(sprite_sheets.len() as u64);
     progress_bar.println("packing images into spritesheets");
 
-    for (index, sprite_sheet) in progress_bar.wrap_iter(sprite_sheets.into_iter().enumerate()) {
+    for (index, sprite_sheet) in sprite_sheets.into_iter().enumerate() {
         let meta = sheep::encode::<AmethystFormat>(&sprite_sheet, ());
 
         // Next, we save the output to a file using the image crate again.
@@ -89,6 +89,8 @@ fn write_images_to_file(
         meta_file
             .write_all(meta_str.as_bytes())
             .expect("Failed to write meta file");
+
+        progress_bar.inc(1);
     }
 
     progress_bar.finish_and_clear();
